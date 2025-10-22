@@ -1,7 +1,46 @@
 
 ssystems Aufgabenstellung
 
-##
+## Installation and configuration of `fail2ban`
+
+``` bash title="Install fail2ban and copy configuration file"
+sudo apt install fail2ban
+sudo cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local
+```
+
+``` bash title="SSHD entry from original configuration file"
+[sshd]
+#
+enabled  = true
+port     = ssh
+filter   = sshd
+logpath  = %(sshd_log)s
+backend  = %(sshd_backend)s
+maxretry = 2
+findtime = 10m
+bantime  = 12h
+```
+
+``` bash title="Restart and enable fail2ban service"
+sudo systemctl restart fail2ban[.service]
+sudo systemctl enable fail2ban[.service]
+sudo systemctl status fail2ban.service
+```
+
+``` bash title="Status for fail2ban sshd"
+sudo fail2ban-client status sshd
+```
+``` output
+Status for the jail: sshd
+|- Filter
+|  |- Currently failed: 1
+|  |- Total failed:     3
+|  `- Journal matches:  _SYSTEMD_UNIT=ssh.service + _COMM=sshd
+`- Actions
+   |- Currently banned: 1
+   |- Total banned:     1
+   `- Banned IP list:   185.156.73.233
+```
 
 ## Installation of Salt 
 
