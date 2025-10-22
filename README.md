@@ -54,3 +54,10 @@ YJEJHgHDFyht794x7HEgmg5p3giVvDn/YJESYAzuuIdA5PcbnBQGgBKLr2H8VRIO
 yxswF4lTY1dHvh6O0Xl9kYAJAesmLbI/hUbUJaXn3jwtF80/4MxZ9jlYDhYJ1yMn
 s+zMm7qORKwIbd96vt713GBaMg==
 -----END CERTIFICATE-----
+```
+
+
+``` bash title="Extracting and converting a single certificate to public ssh key"
+cat cert.pem | openssl x509 -pubkey -noout | openssl rsa -pubin -outform PEM | ssh-keygen -i -m PKCS8 -f /dev/stdin > id_rsa.pub
+```
+
