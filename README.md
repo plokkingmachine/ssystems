@@ -546,6 +546,32 @@ server {
 ```
 
 
+Bash script to create location block for nginx config
+``` bash 
+#!/bin/bash
+
+if [ ! -d "$1" ]; then
+    echo "Error: Directory '$1' does not exist."
+    exit 1
+fi
+
+# List all subdirectories in public/ and extract their names
+# Use ls -d to list directories
+# basename to isolate the names from path
+# xargs -n1 limits execution to one element at a time
+DIRS=$(ls -d "$1"/*/ 2>/dev/null | xargs -n1 basename)
+
+# Join directories
+ALT_DIRS=$(echo "$DIRS" | tr '\n' '|' | sed 's/|$//')
+
+# Generate Nginx block
+echo "location ~ ^/lms/($ALT_DIRS)/(.*)$ {"
+echo "    rewrite ^/lms/($ALT_DIRS)/(.*)$ /lms/public/\$1/\$2 last;"
+echo "}"
+```
+
+The admin passwd for Moodle is placed in `/roor/moodle_adminpasswd`
+
 
 
 
@@ -574,6 +600,86 @@ server {
 
 
 # Appendix 
+
+## Developing a new plugin
+
+The `public/local/readme.txt` is very descriptive about new plugins! :-)
+
+``` txt
+Local plugins
+=============
+Local plugins are used in cases when no standard plugin fits, examples are:
+* event consumers communicating with external systems
+* custom definitions of web services and external functions
+* applications that extend moodle at the system level (hub server, amos server, etc.)
+* new database tables used in core hacks (discouraged)
+* new capability definitions used in core hacks
+* custom admin settings
+
+Standard plugin features:
+* /local/pluginname/version.php - version of script (must be incremented after changes)
+* /local/pluginname/db/install.xml - executed during install (new version.php found)
+* /local/pluginname/db/install.php - executed right after install.xml
+* /local/pluginname/db/uninstall.php - executed during uninstallation
+* /local/pluginname/db/upgrade.php - executed after version.php change
+* /local/pluginname/db/access.php - definition of capabilities
+* /local/pluginname/db/events.php - event handlers and subscripts
+* /local/pluginname/db/messages.php - messaging registration
+* /local/pluginname/db/services.php - definition of web services and web service functions
+* /local/pluginname/db/subplugins.php - list of subplugins types supported by this local plugin
+* /local/pluginname/lang/en/local_pluginname.php - language file
+* /local/pluginname/settings.php - admin settings
+
+
+Local plugin version specification
+----------------------------------
+version.php is mandatory for most of the standard plugin infrastructure.
+The version number must be incremented most plugin changes, the changed
+version tells Moodle to invalidate all caches, do db upgrades if necessary,
+install new capabilities, register event handlers, etc.
+
+Example:
+/local/nicehack/version.php
+<?php
+$plugin->version  = 2010022400;   // The (date) version of this plugin
+$plugin->requires = 2010021900;   // Requires this Moodle version
+
+
+Local plugin capabilities
+-------------------------
+Each local plugin may define own capabilities. It is not recommended to define
+capabilities belonging to other plugins here, but it should work too.
+
+/local/nicehack/access.php content
+<?php
+$local_nicehack_capabilities = array(
+    'local/nicehack:nicecapability' => array(
+        'captype' => 'read',
+        'contextlevel' => CONTEXT_SYSTEM,
+    ),
+);
+
+
+Local plugin language strings
+-----------------------------
+If customisation needs new strings it is recommended to use normal plugin
+strings.
+
+sample language file /local/nicehack/lang/en/local_nicehack.php
+<?php
+$string['hello'] = 'Hi {$a}';
+$string['nicehack:nicecapability'] = 'Some capability';
+
+
+use of the new string in code:
+echo get_string('hello', 'local_nicehack', 'petr');
+
+```
+
+
+
+
+
 
 ## Extract public keys
 
