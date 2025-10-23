@@ -1,0 +1,49 @@
+#apifetch-chart-wrapper {
+    position: relative !important;
+    width: 1200px !important;
+    height: 600px !important;
+    z-index: 1000 !important;
+    /* overflow: visible !important; */
+    /* margin: 0 !important; */
+    /* padding: 0 !important; */
+    /* top: 0 !important; */
+    /* left: 0 !important; */
+}
+
+/* #chart { */
+/*     width: 100% !important; */
+/*     height: 100% !important; */
+/*     margin: 0 !important; */
+/*     padding: 0 !important; */
+/*     position: relative !important; */
+/* } */
+
+.uplot, .u-wrap, .u-under, .u-over, .u-axis {
+    margin: 0 !important;
+    padding: 0 !important;
+    position: absolute !important;
+    /* top: 0 !important; */
+    /* left: 0 !important; */
+}
+
+.u-over {
+    pointer-events: auto !important;
+}
+
+.u-cursor-x, .u-cursor-y {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    z-index: 1002 !important;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: none !important;
+}
+
+.u-tooltip {
+    position: absolute !important;
+    z-index: 1002 !important;
+    pointer-events: none !important;
+    transform: none !important;
+}
