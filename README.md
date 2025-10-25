@@ -583,10 +583,10 @@ The admin passwd for Moodle is placed in `/root/moodle_adminpasswd`
 
 # Developing a new Activity/module
 
-[/mod_apifetchpower/](/mod_apifetchpower/)
+Module code: [/mod_apifetchpower/](/mod_apifetchpower/)
 
 [https://moodledev.io/docs/5.1/apis/plugintypes/mod](https://moodledev.io/docs/5.1/apis/plugintypes/mod) gives information about which files are needed for a module to work.
-Also the other modules in the source code of moodle are very helpful:
+The source code and file structure of other modules is very helpful:
 
 ```
 [apifetchpower]
@@ -614,7 +614,6 @@ url
 wiki
 workshop
 ```
-
 Since I created a plugin in `/local` at first, I copied my working code into a module and adapted the structure and mandatory files to the one demanded for modules.
 
 I explicitly avoided any database calls since there is nothing relevant to store for the API calls.
@@ -632,13 +631,66 @@ The error messages in the browser regarding missing `$string`s were helpful and 
 
 
 
-
-
-## Installation of Salt 
+# Installation Moodle Server with Salt 
 
 [https://docs.saltproject.io/salt/install-guide/en/latest/topics/install-by-operating-system/linux-deb.html](https://docs.saltproject.io/salt/install-guide/en/latest/topics/install-by-operating-system/linux-deb.html)
 
 
+There is an open issue for almost 2 years regarding file.managed: [\[BUG\] 3006.5 salt-ssh "Unable to manage file: none of the specified sources were found" #65882](https://github.com/saltstack/salt/issues/65882)
+
+[\[BUG\] salt-ssh from newer Python (3.9) to 3.6.x host fails #61419](https://github.com/saltstack/salt/issues/61419)
+
+[\[BUG\] file.managed failed via salt-ssh, having python >=3.12 + cffi being installed #68080](https://github.com/saltstack/salt/issues/68080)
+
+[salt-ssh not working on remote hosts with python versions >3.8 #61276](https://github.com/saltstack/salt/issues/61276)
+
+Creating a virtual environment to a lower python version and salt version to avoid conflicts with file.managed
+
+``` bash
+uv init saltenv3.9
+cd saltenv3.9
+echo "3.9" > .python-version
+vim pyproject.toml # requires-python --> 3.9
+uv venv --python 3.9
+uv python pin 3.9
+source .venv/bin/activate
+uv add distro jinja2 looseversion msgpack packaging pyyaml salt==3006.2
+python --version
+salt --version
+```
+
+Creating roster file, placing SSH keys, ssh-copy-id, user sudo permissions on managed machine, pyenv on managed host
+
+
+Testing connection
+``` bash
+sudo salt-ssh 'ssystems' test.ping
+```
+
+Test if files in `/srv/salt/` are readable
+``` bash
+sudo salt-run fileserver.file_list
+```
+```
+- moodle/files/apifetchpower/lang/en/local_apifetchpower.php
+- moodle/files/apifetchpower/lib.php
+- moodle/files/apifetchpower/styles.css
+- moodle/files/apifetchpower/uplot.min.js
+- moodle/files/apifetchpower/version.php
+- moodle/files/apifetchpower/view.php
+- moodle/files/files.tar.gz
+- moodle/files/jail.local
+- moodle/files/php.ini
+- moodle/files/ssystems.XXXXXXXXXXXX.de
+- moodle/files/ssystems.XXXXXXXXXXXX.de_certs/fullchain.pem
+- moodle/files/ssystems.XXXXXXXXXXXX.de_certs/privkey.pem
+- moodle/init.sls
+- testfile.txt
+- top.sls
+```
+
+```
+```
 
 
 
@@ -655,18 +707,12 @@ The error messages in the browser regarding missing `$string`s were helpful and 
 
 # Appendix 
 
-
-
-
-
-
-
 ## Extract public keys
 
 The e-mail is signed with several certificates.<br>
-The Public SSH Keys can be derived from those certificates which look like the following:
+The Public SSH Keys can be derived from certificates which look like the following:
 
-``` output title="certificate_supportATssystems.de.pem"
+``` output
 -----BEGIN CERTIFICATE-----
 MIIGPzCCBKegAwIBAgIQOtkJAnT/8r8q8Z0kKqxSijANBgkqhkiG9w0BAQsFADBY
 MQswCQYDVQQGEwJHQjEYMBYGA1UEChMPU2VjdGlnbyBMaW1pdGVkMS8wLQYDVQQD
@@ -706,7 +752,29 @@ s+zMm7qORKwIbd96vt713GBaMg==
 ```
 
 
-``` bash title="Extracting and converting a single certificate to public ssh key"
-cat cert.pem | openssl x509 -pubkey -noout | openssl rsa -pubin -outform PEM | ssh-keygen -i -m PKCS8 -f /dev/stdin > id_rsa.pub
+Extracting and converting a single certificate to public ssh key
+
+``` bash
+cat cert.pem | openssl x509 -pubkey -noout | ssh-keygen -i -m PKCS8 -f /dev/stdin > id_rsa.pub
 ```
 
+```
+-----BEGIN PUBLIC KEY-----
+MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAwHKIo8fMWOzisy8ZPR/R
+ZQdsHF+qLWDrbWmBbHzlFgPqqk+KFkZaLYJjWjHl90ulNpvMXe7P1Upa8EOxwp7e
+8BwHVQix5voxE7zc0c/bNWqYBjxnDk4qvhTteE9vRw8850ORD/xoesppyn94SoX4
+6Sf6rQ5kI1pRPEn/I0bWqzbhsz95DOVJ7kJlSeJDs4c0f4RVgZ1VOzAdtGiVmVvN
+YOdvVW1+r27gV67uJsGpzoyKZY5lecRtfdlOV1GojYSfduaXq94XfnYusHE5emNM
+IHTMMJrYE7xpp7119OrbdDAxZUVmVIbrDy1jnBIg/Oy719/zKsmVoVISYSQpjZyN
+RXQe9ZSbIMLXMYzEGIHIqSZtsiaQ6wDvjuadphbYaSKyzrBN/zn5/gyxCWVFsww5
+izhXzbyyzVdJMC83kJsbMCum+aT/9nGfzZ+6JAuYrtXgABL6vgqSwNOl6k6PFgiR
+b1TdG+LueAEN+STGbl+qHrlFxnUoPAco5Uk4uKS5UxnO3y+uVbnpXQZxwt9S/Ewf
+0SKEtP+cvyJQZmqhB1ippcRxqhnpwAAdK8X4SDlgTUHmO/o5nvLgzpKwwqREVDQB
+iHnjTHzs7NQJwi6H3b8Bri3Qh/3TpEQg4ieMoc6Y+bsjDZUpIXtDoUuylmqpBpHe
+yVfwvzS2vn6+huFmLnpqmM0CAwEAAQ==
+-----END PUBLIC KEY-----
+```
+
+```
+ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDAcoijx8xY7OKzLxk9H9FlB2wcX6otYOttaYFsfOUWA+qqT4oWRlotgmNaMeX3S6U2m8xd7s/VSlrwQ7HCnt7wHAdVCLHm+jETvNzRz9s1apgGPGcOTiq+FO14T29HDzznQ5EP/Gh6ymnKf3hKhfjpJ/qtDmQjWlE8Sf8jRtarNuGzP3kM5UnuQmVJ4kOzhzR/hFWBnVU7MB20aJWZW81g529VbX6vbuBXru4mwanOjIpljmV5xG192U5XUaiNhJ925per3hd+di6wcTl6Y0wgdMwwmtgTvGmnvXX06tt0MDFlRWZUhusPLWOcEiD87LvX3/MqyZWhUhJhJCmNnI1FdB71lJsgwtcxjMQYgcipJm2yJpDrAO+O5p2mFthpIrLOsE3/Ofn+DLEJZUWzDDmLOFfNvLLNV0kwLzeQmxswK6b5pP/2cZ/Nn7okC5iu1eAAEvq+CpLA06XqTo8WCJFvVN0b4u54AQ35JMZuX6oeuUXGdSg8ByjlSTi4pLlTGc7fL65VueldBnHC31L8TB/RIoS0/5y/IlBmaqEHWKmlxHGqGenAAB0rxfhIOWBNQeY7+jme8uDOkrDCpERUNAGIeeNMfOzs1AnCLofdvwGuLdCH/dOkRCDiJ4yhzpj5uyMNlSkhe0OhS7KWaqkGkd7JV/C/NLa+fr6G4WYuemqYzQ==
+```
