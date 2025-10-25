@@ -306,7 +306,7 @@ To find the correct package names I used GLM4.6 (Kagi):
 
 Install PHP8.4
 ``` bash 
-apt install php php-pgsql php-common php-ctype php-curl php-xml php-gd php-iconv php-intl php-json php-mbstring php-zip php-soap php-tokenizer php-xmlrpc php-fpm
+apt install php php-pgsql php-common php-curl php-xml php-gd php-intl php-json php-mbstring php-zip php-soap php-tokenizer php-xmlrpc php-fpm
 ```
 
 Find the correct configuration file
@@ -583,7 +583,7 @@ The admin passwd for Moodle is placed in `/root/moodle_adminpasswd`
 
 # Developing a new Activity/module
 
-
+[/mod_apifetchpower/README.md](/mod_apifetchpower/README.md)
 
 
 
