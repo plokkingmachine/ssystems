@@ -585,7 +585,35 @@ The admin passwd for Moodle is placed in `/root/moodle_adminpasswd`
 
 [/mod_apifetchpower/](/mod_apifetchpower/)
 
+[https://moodledev.io/docs/5.1/apis/plugintypes/mod](https://moodledev.io/docs/5.1/apis/plugintypes/mod) gives information about which files are needed for a module to work.
+Also the other modules in the source code of moodle are very helpful:
 
+```
+[apifetchpower]
+assign
+bigbluebuttonbn
+book
+choice
+data
+feedback
+folder
+forum
+glossary
+h5pactivity
+imscp
+label
+lesson
+lti
+page
+qbank
+quiz
+resource
+scorm
+subsection
+url
+wiki
+workshop
+```
 
 
 
