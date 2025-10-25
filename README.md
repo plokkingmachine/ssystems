@@ -583,7 +583,7 @@ The admin passwd for Moodle is placed in `/root/moodle_adminpasswd`
 
 # Developing a new Activity/module
 
-[/mod_apifetchpower/README.md](/mod_apifetchpower/README.md)
+[/mod_apifetchpower/](/mod_apifetchpower/)
 
 
 
