@@ -1,5 +1,4 @@
-
-ssystems Aufgabenstellung
+# Installation Moodle Server Manually
 
 ## Installation and configuration of `fail2ban`
 
@@ -50,7 +49,7 @@ sudo apt install ufw
 ```
 
 ``` bash
-sudo -s
+sudo su -s
 ufw default deny incoming
 ufw default allow outgoing
 ufw limit 22/tcp
@@ -85,43 +84,43 @@ server {
                 access_log off;
         }
 
-        # Only root path 301 to allow acme challenge
-        location / {
-                return 301 https://www.ssystems.XXXXXXXXXXXX.de$request_uri;
-        }
+        # # Only root path 301 to allow acme challenge
+        # location / {
+        #         return 301 https://www.ssystems.XXXXXXXXXXXX.de$request_uri;
+        # }
 }
 
-# 301 for URL without www. prefix
-server {
-        listen 443 ssl;
-        listen [::]:443 ssl;
-        http2 on;
-        server_name ssystems.XXXXXXXXXXXX de;
-
-        ssl_certificate     /etc/nginx/certs/ssystems.XXXXXXXXXXXX.de/fullchain.pem;
-        ssl_certificate_key /etc/nginx/certs/ssystems.XXXXXXXXXXXX.de/privkey.pem;
-
-        return 301 https://www.ssystems.XXXXXXXXXXXX.de$request_uri;
-}
-
-# Actual configuration for Moodle
-server {
-        listen 443 ssl;
-        listen [::]:443 ssl;
-        http2 on;
-        server_name www.ssystems.XXXXXXXXXXXX.de;
-
-        ssl_certificate     /etc/nginx/certs/ssystems.XXXXXXXXXXXX.de/fullchain.pem;
-        ssl_certificate_key /etc/nginx/certs/ssystems.XXXXXXXXXXXX.de/privkey.pem;
-
-        # MOODLE FAST CGI PASS PLACEHOLDER
-}
+# # 301 for URL without www. prefix
+# server {
+#         listen 443 ssl;
+#         listen [::]:443 ssl;
+#         http2 on;
+#         server_name ssystems.XXXXXXXXXXXX de;
+# 
+#         ssl_certificate     /etc/nginx/certs/ssystems.XXXXXXXXXXXX.de/fullchain.pem;
+#         ssl_certificate_key /etc/nginx/certs/ssystems.XXXXXXXXXXXX.de/privkey.pem;
+# 
+#         return 301 https://www.ssystems.XXXXXXXXXXXX.de$request_uri;
+# }
+# 
+# # Actual configuration for Moodle
+# server {
+#         listen 443 ssl;
+#         listen [::]:443 ssl;
+#         http2 on;
+#         server_name www.ssystems.XXXXXXXXXXXX.de;
+# 
+#         ssl_certificate     /etc/nginx/certs/ssystems.XXXXXXXXXXXX.de/fullchain.pem;
+#         ssl_certificate_key /etc/nginx/certs/ssystems.XXXXXXXXXXXX.de/privkey.pem;
+# 
+#         # MOODLE FAST CGI PASS PLACEHOLDER
+# }
 ```
 
 
 ### Installing and configuring `acme.sh`
 
-Create extra user acme
+Create extra user acme (limited permissions, separate crontab)
 
 ``` bash 
 sudo useradd -g users -G sudo -s /bin/bash -m acme
@@ -223,16 +222,13 @@ psql
 ``` postgres title="Create a new user for Moodle"
 CREATE USER moodleuser WITH PASSWORD 'XXXXXXXXXXXXXXXXXXXXXXX';
 ```
-``` output
-CREATE ROLE
-```
 ``` postgres title="Create the database"
 CREATE DATABASE moodle WITH OWNER moodleuser;
 ```
-``` output
-CREATE DATABASE
-```
-``` postgres title="List databases and quit if correct"
+
+List databases and quit if correct
+
+``` postgres
 \l
 ```
 ``` output
@@ -249,20 +245,17 @@ CREATE DATABASE
 ```
 
 
-Edit the client authentication file:
+Edit the client authentication file: `/etc/postgresql/17/main/pg_hba.conf`
 
-``` bash title="/etc/postgresql/17/main/pg_hba.conf"
+``` bash
 # MOODLE
 host  moodle    moodleuser    127.0.0.1/32    password
 ```
 
-``` bash title="Restart the PostgreSQL service"
+Restart PostgreSQL service
+``` bash
 /etc/init.d/postgresql restart
 ```
-``` output
-Restarting postgresql (via systemctl): postgresql.service.
-```
-
 
 
 
@@ -291,11 +284,11 @@ To find the correct package names I used GLM4.6 (Kagi):
 
 | PHP Module | APT Package Name |
 | --- | --- |
-| ctype | php-ctype |
+| ctype | Included in php-common |
 | curl  | php-curl |
 | dom |php-xml                   |
 | gd |php-gd                      |
-| iconv |php-iconv               |
+| iconv |Included in php-common               |
 | intl |php-intl                  |
 | json |php-json                  |
 | mbstring |php-mbstring          |
@@ -306,7 +299,7 @@ To find the correct package names I used GLM4.6 (Kagi):
 | zip |php-zip                   |
 | openssl | Included in php-common |
 | soap | php-soap |
-| sodium | php-sodium (not in APT repo) |
+| sodium | php-sodium |
 | tokenizer | php-tokenizer |
 | xmlrpc | php-xmlrpc |
 
@@ -336,7 +329,7 @@ TEMP FOLDER WAS CONFIGURED EXTERNALLY
 ERRORS AS DEFAULT
 post_max_size = 201M
 upload_max_filesize = 200M
-max_input_vars = 10000 (at least 5000)
+max_input_vars = 10000 (at least 5000, otherwise installation doesn't finish)
 ```
 
 
@@ -409,7 +402,7 @@ security.limit_extensions = .php
 
 
 
-### Nginx configuration
+### Complete Nginx configuration
 
 
 ``` nginx
@@ -469,11 +462,14 @@ server {
                 return 301 /lms/;
         }
 
-        # This little beast is responsible for rewriting the path for
+        # This is responsible for rewriting the path for
         # .php files living in
         #   /lms/lib/
         #   /lms/theme/
         #   /lms/login/
+        #   /lms/admin/
+        #   /lms/my/
+        #   /lms/profile/
         location ~ ^/lms/(lib|theme|login|admin|my|profile)/.*\.php.*$ {
                 rewrite ^/lms/(lib|theme|login|admin|my|profile)/(.*)$ /lms/public/$1/$2 last;
         }
@@ -487,7 +483,7 @@ server {
         # Second approach
         #
         #  Script which lists directories in public/ and concatenates basenames to
-        #  build rule automatically
+        #  build rule automatically (see below)
         #
         location ~ ^/lms/(admin|ai|analytics|auth|availability|backup|badges|blocks|blog|cache|calendar|cohort|comment|communication|competency|completion|contentbank|course|customfield|dataformat|enrol|error|favourites|files|filter|grade|group|h5p|install|iplookup|lang|lib|local|login|media|message|mnet|mod|moodlenet|my|notes|payment|pix|plagiarism|portfolio|privacy|question|rating|report|reportbuilder|repository|rss|search|sms|tag|theme|user|userpix|webservice)/(.*)$ {
                 rewrite ^/lms/(admin|ai|analytics|auth|availability|backup|badges|blocks|blog|cache|calendar|cohort|comment|communication|competency|completion|contentbank|course|customfield|dataformat|enrol|error|favourites|files|filter|grade|group|h5p|install|iplookup|lang|lib|local|login|media|message|mnet|mod|moodlenet|my|notes|payment|pix|plagiarism|portfolio|privacy|question|rating|report|reportbuilder|repository|rss|search|sms|tag|theme|user|userpix|webservice)/(.*)$ /lms/public/$1/$2 last;
@@ -570,7 +566,31 @@ echo "    rewrite ^/lms/($ALT_DIRS)/(.*)$ /lms/public/\$1/\$2 last;"
 echo "}"
 ```
 
-The admin passwd for Moodle is placed in `/roor/moodle_adminpasswd`
+The admin passwd for Moodle is placed in `/root/moodle_adminpasswd`
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Developing a new Activity/module
+
+
+
+
+
+
+
+
+
 
 
 
@@ -601,80 +621,6 @@ The admin passwd for Moodle is placed in `/roor/moodle_adminpasswd`
 
 # Appendix 
 
-## Developing a new plugin
-
-The `public/local/readme.txt` is very descriptive about new plugins! :-)
-
-``` txt
-Local plugins
-=============
-Local plugins are used in cases when no standard plugin fits, examples are:
-* event consumers communicating with external systems
-* custom definitions of web services and external functions
-* applications that extend moodle at the system level (hub server, amos server, etc.)
-* new database tables used in core hacks (discouraged)
-* new capability definitions used in core hacks
-* custom admin settings
-
-Standard plugin features:
-* /local/pluginname/version.php - version of script (must be incremented after changes)
-* /local/pluginname/db/install.xml - executed during install (new version.php found)
-* /local/pluginname/db/install.php - executed right after install.xml
-* /local/pluginname/db/uninstall.php - executed during uninstallation
-* /local/pluginname/db/upgrade.php - executed after version.php change
-* /local/pluginname/db/access.php - definition of capabilities
-* /local/pluginname/db/events.php - event handlers and subscripts
-* /local/pluginname/db/messages.php - messaging registration
-* /local/pluginname/db/services.php - definition of web services and web service functions
-* /local/pluginname/db/subplugins.php - list of subplugins types supported by this local plugin
-* /local/pluginname/lang/en/local_pluginname.php - language file
-* /local/pluginname/settings.php - admin settings
-
-
-Local plugin version specification
-----------------------------------
-version.php is mandatory for most of the standard plugin infrastructure.
-The version number must be incremented most plugin changes, the changed
-version tells Moodle to invalidate all caches, do db upgrades if necessary,
-install new capabilities, register event handlers, etc.
-
-Example:
-/local/nicehack/version.php
-<?php
-$plugin->version  = 2010022400;   // The (date) version of this plugin
-$plugin->requires = 2010021900;   // Requires this Moodle version
-
-
-Local plugin capabilities
--------------------------
-Each local plugin may define own capabilities. It is not recommended to define
-capabilities belonging to other plugins here, but it should work too.
-
-/local/nicehack/access.php content
-<?php
-$local_nicehack_capabilities = array(
-    'local/nicehack:nicecapability' => array(
-        'captype' => 'read',
-        'contextlevel' => CONTEXT_SYSTEM,
-    ),
-);
-
-
-Local plugin language strings
------------------------------
-If customisation needs new strings it is recommended to use normal plugin
-strings.
-
-sample language file /local/nicehack/lang/en/local_nicehack.php
-<?php
-$string['hello'] = 'Hi {$a}';
-$string['nicehack:nicecapability'] = 'Some capability';
-
-
-use of the new string in code:
-echo get_string('hello', 'local_nicehack', 'petr');
-
-```
 
 
 
