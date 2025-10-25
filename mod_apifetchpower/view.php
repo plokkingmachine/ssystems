@@ -22,7 +22,7 @@
  * @license   http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
 
-require_once(__DIR__ . '/../../config.php'); // Include Moodle config.
+require_once(__DIR__ . '/../../config.php');  // Include Moodle config.
 require_once($CFG->libdir . '/formslib.php'); // Include formslib for forms.
 require_once(__DIR__ . '/lib.php');           // view.php has to know about lib.php
 

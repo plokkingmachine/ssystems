@@ -22,19 +22,19 @@
  * @license   http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
  */
 
-$string['pluginname'] = 'API Fetcher for Energy-Charts'; // Name of the plugin, displayed in Moodle.
+$string['pluginname'] = 'API Fetcher for Energy-Charts';
 $string['modulename'] = 'apifetcherpower';
 $string['modulenameplural'] = 'apifetcherspower';
 $string['modulename_help'] = 'This API Fetcher gets data power production data from Energy-Charts and creates graphs.';
 $string['general'] = 'General';
 $string['pluginadministration'] = 'Plugin administration';
-$string['apiurl'] = 'API URL'; // Label for the API URL input field.
-$string['apitoken'] = 'API Token'; // Label for the authentication token input field.
-$string['fetchdata'] = 'Fetch JSON'; // Text for the submit button.
-$string['response'] = 'API Response'; // Heading for the JSON response display.
-$string['error'] = 'Error'; // Prefix for error messages.
-$string['country'] = 'EU-Country'; // Label for the region dropdown.
-$string['starttime'] = 'Start Time'; // Label for the start time field.
-$string['endtime'] = 'End Time'; // Label for the end time field.
-$string['renderchart'] = 'Render Chart'; // Label for the chart rendering button.
-$string['charttitle'] = 'Chart'; // Title for the chart display.
+$string['apiurl'] = 'API URL';           // Label for the API URL input field.
+$string['apitoken'] = 'API Token';       // Label for the authentication token input field.
+$string['fetchdata'] = 'Fetch JSON';     // Text for the JSON button.
+$string['response'] = 'API Response';    // Heading for the JSON response display.
+$string['error'] = 'Error';              // Prefix for error messages.
+$string['country'] = 'EU-Country';       // Label for the country dropdown.
+$string['starttime'] = 'Start Time';     // Label for the start time field.
+$string['endtime'] = 'End Time';         // Label for the end time field.
+$string['renderchart'] = 'Render Chart'; // Text for the chart rendering button.
+$string['charttitle'] = 'Chart';         // Title for the chart display.

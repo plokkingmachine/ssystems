@@ -615,6 +615,12 @@ wiki
 workshop
 ```
 
+Since I created a plugin in `/local` at first, I copied my working code into a module and adapted the structure and mandatory files to the one demanded for modules.
+
+I explicitly avoided any database calls since there is nothing relevant to store for the API calls.
+
+The error messages in the browser regarding missing `$string`s were helpful and directing.
+
 
 
 
