@@ -644,7 +644,9 @@ There is an open issue for almost 2 years regarding file.managed: [\[BUG\] 3006.
 
 [salt-ssh not working on remote hosts with python versions >3.8 #61276](https://github.com/saltstack/salt/issues/61276)
 
-Creating a virtual environment to a lower python version and salt version to avoid conflicts with file.managed
+## venv
+
+Creating a virtual environment with python 3.9 and salt 3006.2 to avoid conflicts with file.managed
 
 ``` bash
 uv init saltenv3.9
@@ -655,11 +657,34 @@ uv venv --python 3.9
 uv python pin 3.9
 source .venv/bin/activate
 uv add distro jinja2 looseversion msgpack packaging pyyaml salt==3006.2
-python --version
-salt --version
 ```
 
-Creating roster file, placing SSH keys, ssh-copy-id, user sudo permissions on managed machine, pyenv on managed host
+``` bash
+(saltenv3.9) ubuntu@ubuntu2404:~/saltenv3.9$ python --version
+Python 3.9.24
+(saltenv3.9) ubuntu@ubuntu2404:~/saltenv3.9$ salt --version
+salt 3006.5 (Sulfur)
+```
+
+Roster file
+
+``` yaml
+ssystems:
+  host: 1XX.XXX.XXX.XXX
+  user: frederik
+  sudo: true
+  python3: /home/frederik/.pyenv/versions/3.8.19/bin/python3
+```
+
+Place SSH-Key
+
+``` bash
+sudo ssh-copy-id -i /etc/salt/pki/master/ssh/salt-ssh.rsa.pub frederik@ssystems.XXXXXXXXXXXX.de
+```
+
+**Give user sudo NOPASSWD: permissions!**
+
+*Optional: Install pyenv for a pinned python version execution environment*
 
 
 Testing connection
@@ -689,7 +714,263 @@ sudo salt-run fileserver.file_list
 - top.sls
 ```
 
+
+``` 
 ```
+
+
+
+
+
+
+
+## Bash-Script
+
+Since I couldn't get `file.managed` to work properly, I created a `files.tar.gz` containing all the relevant configuration files and certificates.
+
+`run.sh`
+
+``` bash
+#!/bin/bash
+
+scp ~/work/ssystems/salt-ssh/files/files.tar.gz fwssystems:~
+
+sudo salt-ssh 'ssystems' state.apply moodle
+```
+
+
+
+
+
+## `.sls`
+
+```
+update_repos:
+  cmd.run:
+    - name: apt update
+
+upgrade_packages:
+  cmd.run:
+    - name: apt upgrade -y
+    - require:
+      - cmd: update_repos
+
+install_packages:
+  pkg.installed:
+    - names:
+      - nginx
+      - postgresql
+      - git
+      - fail2ban
+      - ufw
+      - ca-certificates
+      - php
+      - php-pgsql
+      - php-common
+      - php-curl
+      - php-xml
+      - php-gd
+      - php-intl
+      - php-json
+      - php-mbstring
+      - php-zip
+      - php-soap
+      - php-tokenizer
+      - php-xmlrpc
+      - php-fpm
+
+extract_files:
+  cmd.run:
+    - name: |
+        tar -xzvf /home/frederik/files.tar.gz && \
+        chown -R $USER:$USER apifetchpower/ jail.local php.ini ssystems.XXXXXXXXXXXX.de ssystems.XXXXXXXXXXXX.de
+
+replace_php_ini:
+  cmd.run:
+    - name: |
+        mv ~/php.ini /etc/php/8.4/cli/
+
+adapt_fpmpool_config:
+  cmd.run:
+    - name: |
+        sudo echo "security.limit_extensions = .php" >> /etc/php/8.4/fpm/pool.d/www.conf
+
+# Approaches to utilize file.managed and workarounds:
+#replace_php_ini:
+  # Since I have python 3.12.3 on my machine:
+  # https://github.com/saltstack/salt/issues/68080
+  # --> uv venv
+  # uv init saltenv
+  # cd saltenv
+  # uv venv --python 3.9
+  # source .venv/bin/activate
+  # uv add salt==3006.2 looseversion packaging distro PyYaml jinja2 msgpack
+  # sudo salt-run fileserver.clear_cache && sudo salt-run fileserver.update
+  #
+  # ----------
+  #           ID: replace_php_ini
+  #     Function: file.copy
+  #         Name: /etc/php/8.4/cli/php.ini
+  #       Result: False
+  #      Comment: Source file "/srv/salt/moodle/files/php.ini" is not present
+  #      Started: 09:16:40.462841
+  #     Duration: 0.653 ms
+  #      Changes:
+  #
+  # Summary for ssystems
+  # -------------
+  # Succeeded: 22 (changed=2)
+  # Failed:     1
+  # -------------
+  # Total states run:     23
+  # Total run time:    2.810 s
+  # [DEBUG   ] Using selector: EpollSelector
+  # [DEBUG   ] Using selector: EpollSelector
+  # [DEBUG   ] Using selector: EpollSelector
+  # [DEBUG   ] Publisher connecting to /var/run/salt/master/master_event_pull.ipc
+  # [DEBUG   ] Closing _TCPPubServerPublisher instance
+  # (saltenv) ubuntu@ubuntu2404:~/saltenv$ sudo ls -l /srv/salt/moodle/files/php.ini
+  # -rw-r--r-- 1 ubuntu users 69369 Oct 24 07:51 /srv/salt/moodle/files/php.ini
+  # (saltenv) ubuntu@ubuntu2404:~/saltenv$ ls -l /srv/salt/moodle/files/php.ini
+  # -rw-r--r-- 1 ubuntu users 69369 Oct 24 07:51 /srv/salt/moodle/files/php.ini
+  # (saltenv) ubuntu@ubuntu2404:~/saltenv$ salt --version
+  # salt 3006.5 (Sulfur)
+  # (saltenv) ubuntu@ubuntu2404:~/saltenv$ python3 --version
+  # Python 3.9.24
+  #
+  # file.copy:
+  #   - name: /etc/php/8.4/cli/php.ini
+  #   - source: /srv/salt/moodle/files/php.ini
+  #   - force: true
+  #
+  # Also does NOT work!
+  #module.run:
+  #  - name: cp.get_file
+  #  - path: salt://moodle/files/php.ini
+  #  - dest: /etc/php/8.4/cli/php.ini
+  #  - makedirs: true
+  #
+  # Also does NOT work
+  # cmd.run:
+  #   - name: |
+  #       ssh {{ grains['id'] }} "sudo mkdir -p /etc/php/8.4/cli && \
+  #       cat > /etc/php/8.4/cli/php.ini && \
+  #       chmod 644 /etc/php/8.4/cli/php.ini" < /srv/salt/moodle/files/php.ini
+  #   - retries: 3
+  #   - retry_delay: 1
+  #
+  # Also does not work
+  #cmd.script:
+  #  - source: /srv/salt/moodle/files/php.ini
+  #  - name: |
+  #      mkdir -p /etc/php/8.4/cli && \
+  #      cat > /etc/php/8.4/cli/php.ini && \
+  #      chmod 644 /etc/php/8.4/cli/php.ini
+  #  - shell: bash
+  #
+  #cmd.run:
+  #  - name: |
+  #      scp /srv/salt/moodle/files/php.ini {{ grains['id'] }}:/tmp/php.ini && \
+  #      ssh {{ grains['id'] }} "sudo mkdir -p /etc/php/8.4/cli && \
+  #      sudo mv /tmp/php.ini /etc/php/8.4/cli/php.ini && \
+  #      sudo chmod 644 /etc/php/8.4/cli/php.ini"
+  #  - retries: 1
+  #
+  # FIX in url.py
+  # https://github.com/saltstack/salt/issues/68080#issuecomment-3026951670
+  #
+  # file.copy:
+  #   - name: /etc/php/8.4/cli/php.ini
+  #   - source: /src/salt/moodle/files/php.ini
+  #   - force: True
+  #
+  #
+  #file.managed:
+  #  - name: /etc/php/8.4/cli/php.ini
+  #  - source: /srv/salt/moodle/files/php.ini
+  #  - saltenv: base
+  #  - user: root
+  #  - makedirs: true
+  #  - replace: true
+  #
+  #file.managed:
+  #  - name: /etc/php/8.4/cli/testfile.txt
+  #  #- source: /srv/salt/testfile.txt
+  #  - source: salt://testfile.txt
+  #  - makedirs: true
+
+move_jail_local:
+  cmd.run:
+    - name: |
+        mv ~/jail.local /etc/fail2ban/
+
+move_moodle_nginx_conf:
+  cmd.run:
+    - name: |
+        mv ~/ssystems.XXXXXXXXXXXX.de /etc/nginx/conf.d/ssystems.XXXXXXXXXXXX.de.conf
+
+postgres_database_init:
+  cmd.run:
+    - name: |
+        sudo -u postgres psql -c "CREATE USER moodleuser WITH PASSWORD 'XXXXXXXXXXXXXXX';"
+        sudo -u postgres psql -c "CREATE DATABASE moodle WITH OWNER moodleuser;"
+        echo "host  moodle    moodleuser    127.0.0.1/32    password" >> /etc/postgresql/17/main/pg_hba.conf && \
+        /etc/init.d/postgresql restart
+
+gitclone_moodle:
+  cmd.run:
+    - name: |
+        git clone -b MOODLE_501_STABLE git://git.moodle.org/moodle.git /var/www/html/lms && \
+        sudo chown -R www-data:www-data /var/www/html/lms/ && \
+        sudo chmod -R 0755 /var/www/html/lms/ && \
+        sudo find /var/www/html/lms/ -type f -exec chmod 644 {} \;
+
+create_moodledata_directory:
+  cmd.run:
+    - name: |
+        sudo mkdir -p /var/moodledata && \
+        chmod 0777 /var/moodledata
+
+move_moodle_module:
+  cmd.run:
+    - name: |
+        mv -f ~/apifetchpower /var/www/html/lms/public/mod/
+
+install_certificates:
+  cmd.run:
+    - name: |
+        mkdir -p /etc/nginx/certs && \
+        mv -f ~/ssystems.XXXXXXXXXXXX.de_certs /etc/nginx/certs/ssystems.XXXXXXXXXXXX.de
+
+nginx_enable:
+  service.enabled:
+    - name: nginx
+    - enable: true
+
+nginx_restart:
+  service.running:
+    - name: nginx
+    - restarted: true
+
+php_fpm_enable:
+  service.enabled:
+    - name: php8.4-fpm
+    - enable: true
+
+php_fpm_restart:
+  service.running:
+    - name: php8.4-fpm
+    - restarted: true
+
+postgresql_enable:
+  service.enabled:
+    - name: postgresql
+    - enable: true
+
+postgresql_restart:
+  service.running:
+    - name: postgresql
+    - restarted: true
 ```
 
 
